@@ -4,7 +4,7 @@
 const express = require('express');
 const router = express.Router();
 
-const { PrismaClient } = require('@prisma/client'); // ✅ standaard pad
+const { PrismaClient } = require('@prisma/client'); 
 const prisma = new PrismaClient();
 
 // ------------------------------
@@ -17,8 +17,7 @@ router.get('/', async (req, res) => {
 });
 
 // ------------------------------
-// [Post] users
-// return id  (id kan ook 0 zijn -> niet gelukt)
+// [Post] users 
 // ------------------------------
 router.post('/', async (req, res) => {
   const { FirstName, LastName, Age, PhoneNumber, Email, Address, Picture, Password, Role } = req.body;
@@ -53,8 +52,7 @@ router.post('/', async (req, res) => {
 });
 
 // ------------------------------
-// [Put] users
-// return 
+// [Put] users 
 // ------------------------------
 router.put('/:id', async (req, res) => {
   let userId = req.params.id;
@@ -82,8 +80,7 @@ router.put('/:id', async (req, res) => {
 
 // ------------------------------
 // [Delete] users
-// return boolean (true or false)
-//
+// ------------------------------
 router.delete('/:id', async (req, res) => {
   const userId = req.params.id;
   

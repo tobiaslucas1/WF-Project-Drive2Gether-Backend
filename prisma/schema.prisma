@@ -7,75 +7,74 @@ datasource db {
   url      = "mysql://root:Atlet13k!@localhost:3306/drive2gether"
 }
 
-model car {
-  ID                 Int     @id @default(autoincrement())
-  Model              String? @db.VarChar(100)
-  Brand              String? @db.VarChar(100)
-  LicensePlate       String  @unique(map: "LicensePlate") @db.VarChar(50)
-  Color              String? @db.VarChar(50)
-  DriverLicenseImage String? @db.VarChar(500)
-  IdentityCardImage  String? @db.VarChar(500)
+model User {
+  ID             Int      @id @default(autoincrement())
+  FirstName      String
+  LastName       String
+  Age            Int
+  PhoneNumber    String   @unique
+  Email          String   @unique
+  Address        String
+  Picture        String?
+  Password       String
+  Role           Role
+
+  car            Car[]
+  tripPassenger  TripPassenger[]
+}
+
+model Car {
+  ID                 Int      @id @default(autoincrement())
+  Model              String?
+  Brand              String?
+  LicensePlate       String   @unique
+  Color              String?
+  DriverLicenseImage String?
+  IdentityCardImage  String?
   DriverID           Int
-  user               user    @relation(fields: [DriverID], references: [ID], onDelete: NoAction, onUpdate: NoAction, map: "car_ibfk_1")
-  trip               trip[]
 
-  @@index([DriverID], map: "DriverID")
+  user User @relation(fields: [DriverID], references: [ID])
+  trip Trip[]
 }
 
-model trip {
-  ID             Int                 @id @default(autoincrement())
-  DeparturePlace String              @db.VarChar(255)
-  DepartureTime  DateTime            @db.DateTime(0)
-  ArrivalPlace   String              @db.VarChar(255)
-  Price          Decimal?            @db.Decimal(10, 2)
-  PaymentMethod  trip_PaymentMethod?
+model Trip {
+  ID             Int      @id @default(autoincrement())
+  DeparturePlace String
+  DepartureTime  DateTime
+  ArrivalPlace   String
+  Price          Decimal?
+  PaymentMethod  PaymentMethod
   CarID          Int
-  car            car                 @relation(fields: [CarID], references: [ID], onDelete: NoAction, onUpdate: NoAction, map: "trip_ibfk_1")
-  trippassenger  trippassenger[]
 
-  @@index([CarID], map: "CarID")
+  car            Car @relation(fields: [CarID], references: [ID])
+  tripPassenger  TripPassenger[]
 }
 
-model trippassenger {
+model TripPassenger {
   TripID      Int
   PassengerID Int
-  Status      trippassenger_Status?
-  trip        trip                  @relation(fields: [TripID], references: [ID], onDelete: NoAction, onUpdate: NoAction, map: "trippassenger_ibfk_1")
-  user        user                  @relation(fields: [PassengerID], references: [ID], onDelete: NoAction, onUpdate: NoAction, map: "trippassenger_ibfk_2")
+  Status      BookingStatus
+
+  trip        Trip @relation(fields: [TripID], references: [ID])
+  user        User @relation(fields: [PassengerID], references: [ID])
 
   @@id([TripID, PassengerID])
-  @@index([PassengerID], map: "PassengerID")
 }
 
-model user {
-  ID            Int             @id @default(autoincrement())
-  FirstName     String          @db.VarChar(100)
-  LastName      String          @db.VarChar(100)
-  Age           Int
-  PhoneNumber   String          @unique(map: "PhoneNumber") @db.VarChar(20)
-  Email         String          @unique(map: "Email") @db.VarChar(255)
-  Address       String          @db.VarChar(500)
-  Picture       String?         @db.VarChar(500)
-  Password      String          @db.VarChar(255)
-  Role          user_Role
-  car           car[]
-  trippassenger trippassenger[]
+enum Role {
+  Driver
+  Passenger
+  Both
 }
 
-enum trippassenger_Status {
-  Pending
-  Confirmed
-  Cancelled
-}
-
-enum trip_PaymentMethod {
+enum PaymentMethod {
   Cash
   Card
   Online
 }
 
-enum user_Role {
-  Driver
-  Passenger
-  Both
+enum BookingStatus {
+  Pending
+  Confirmed
+  Cancelled
 }
