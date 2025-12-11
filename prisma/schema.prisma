@@ -15,7 +15,6 @@ model car {
   LicensePlate String?  @unique(map: "LicensePlate") @db.VarChar(50)
   Seats        Int?
   isVerified   Boolean? @default(false)
-  Color        String?  @db.VarChar(255)
   user         user?    @relation(fields: [OwnerID], references: [UserID], onDelete: NoAction, onUpdate: NoAction, map: "car_ibfk_1")
   trip         trip[]
 

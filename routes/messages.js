@@ -10,7 +10,6 @@ const prisma = new PrismaClient();
 // [GET] /messages/:TripID
 //  return array of messages for a specific trip
 // ------------------------------
-
 router.get('/trip/:TripID', async (req, res) => {
   const TripID = parseInt(req.params.TripID);
     const messages = await prisma.message.findMany({
@@ -32,7 +31,6 @@ router.get('/trip/:TripID', async (req, res) => {
 // [GET] messages
 // return array of messages
 // --------------------------------------------------------
-
 router.get('/', async (req, res) => {
   const messages = await prisma.message.findMany({
     select: {
@@ -58,6 +56,7 @@ router.post('/', async (req, res) => {
   const ReceiverID =  req.body.ReceiverID;
   const TripID = req.body.TripID;
   const Content = req.body.Content;
+  // Convert to integers
   const senderInt = parseInt(SenderID);
   const receiverInt = parseInt(ReceiverID);
   const tripInt = parseInt(TripID);
@@ -66,13 +65,12 @@ router.post('/', async (req, res) => {
             where: { TripID: TripID }
         });
 
-        if (!trip) {
-            // Dit is de 'if'-check die u vroeg om te gebruiken!
-            return res.status(404).json({
-                status: "Error",
-                message: `Trip with ID ${TripID} not found.`,
-            });
-        }
+    if (!trip) {
+        return res.json({
+            status: "Error",
+            message: `Trip with ID ${TripID} not found.`,
+        });
+    }
 
   const newMessage = await prisma.message.create({
       data: {
@@ -87,7 +85,6 @@ router.post('/', async (req, res) => {
 
     
     
-    
     if(!SenderID || !ReceiverID || !TripID || !Content){
       return  res.json({
         status: "Error",
@@ -100,10 +97,6 @@ router.post('/', async (req, res) => {
 })
 
 
-// ------------------------------
-// [Delete] messages
-// return boolean (true or false)
-//-------------------------------
 
 
 module.exports = router;
