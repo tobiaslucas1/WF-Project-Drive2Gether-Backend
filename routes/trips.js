@@ -58,8 +58,8 @@ router.get('/:id', async (req, res) => {
   if (!trip) 
     {
       return res.json({ 
-        status: "Fout",
-         message: `Rit met ID ${TripID} niet gevonden.`
+        status: "Error",
+         message: `Trip with ID ${TripID} not found.`
          });
     } 
 
