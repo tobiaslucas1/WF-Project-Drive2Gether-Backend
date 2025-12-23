@@ -124,4 +124,40 @@ router.delete('/:id', async (req, res) => {
 });
 
 
+// -----------------------------------
+// LOGIN ROUTE 
+// URL: POST /users/login
+// -----------------------------------
+router.post('/login', async (req, res) => {
+  const { Email, Password } = req.body;
+
+  
+  // search user
+  const user = await prisma.user.findUnique({
+    where: { Email: Email }
+  });
+  
+  // Check data 
+  if (!Email || !Password) {
+    return res.status(400).json({ status: "Vul e-mail en wachtwoord in" });
+  }
+  if (!user || user.PasswordHash !== Password) {
+    return res.status(401).json({ status: "E-mail of wachtwoord onjuist" });
+  }
+  
+  // login
+  res.json({
+    status: "success",
+    user: {
+      UserID: user.UserID,
+      FirstName: user.FirstName,
+      LastName: user.LastName,
+      Email: user.Email,
+      Address: user.Address
+    }
+  });
+  
+});
+
+
 module.exports = router;
