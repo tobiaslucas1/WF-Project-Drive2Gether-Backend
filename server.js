@@ -12,12 +12,14 @@ app.use(cors());
 console.log("Api is running!")
 
 //endpoints
+const bookingsRouter = require('./routes/booking');
 const carsRouter = require('./routes/cars');
 const messagesRouter = require('./routes/messages');
 const reviewsRouter = require('./routes/reviews');
 const tripsRouter = require('./routes/trips');
 const userRouter = require('./routes/users');
 
+app.use('/bookings', bookingsRouter);
 app.use('/cars', carsRouter);
 app.use('/messages', messagesRouter);
 app.use('/reviews', reviewsRouter);
