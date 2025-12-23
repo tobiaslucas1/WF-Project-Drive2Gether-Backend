@@ -5,8 +5,10 @@ const  cors = require ('cors')
 // functie.express() in een variabele zetten
 //daarna extra settings toevoegen
 const app = express();
+
 app.use(express.json());
 app.use(cors());
+
 console.log("Api is running!")
 
 //endpoints
