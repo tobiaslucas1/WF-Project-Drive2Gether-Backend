@@ -9,6 +9,51 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 // ------------------------------
+// [GET] /trips/search
+// Zoek trips op basis van start en eind locatie
+// ------------------------------
+router.get('/search', async (req, res) => {
+    const { start, end } = req.query;
+
+    try {
+        const trips = await prisma.trip.findMany({
+            where: {
+                TripStatus: 'Scheduled',
+                // contains = delen vd naam
+                ...(start && {
+                    StartLocation: {
+                        contains: start
+                    }
+                }),
+                // Filter op eindlocatie 
+                ...(end && {
+                    EndLocation: {
+                        contains: end
+                    }
+                })
+            },
+            include: {
+                user: { 
+                    select: { FirstName: true, LastName: true }
+                },
+                car: {
+                    select: { Brand: true, Model: true, Color: true }
+                }
+            },
+            orderBy: {
+                DepartureTime: 'asc' 
+            }
+        });
+
+        res.json(trips);
+
+    } catch (error) {
+        console.error("Fout bij zoeken trips:", error);
+        res.status(500).json({ status: "Server error" });
+    }
+});
+
+// ------------------------------
 // [Get] trips
 // return array of trips
 // ------------------------------
@@ -40,17 +85,16 @@ router.get('/:id', async (req, res) => {
 
   const trip = await prisma.trip.findUnique({
     where: {TripID},
-    select: {
-      TripID: true,
-      DriverID: true,
-      CarID: true,
-      StartLocation: true,
-      EndLocation: true,
-      DepartureTime: true,
-      Price: true,
-      SeatsBooked: true,
-      SeatsOffered: true,
-      TripStatus: true,
+    include: {
+        user: { 
+            select: { 
+                FirstName: true, 
+                LastName: true,
+                PhoneNumber: true, 
+                Email: true     
+            } 
+        },
+        car: true
     }
     
   });
@@ -109,7 +153,7 @@ router.post('/', async (req, res) => {
 // I think Because of Foreign Keys
 // ------------------------------
 router.put('/:id', async (req, res) => {
-  const TripID = req.params.id;
+  const TripID = parseInt(req.params.id);
 
   const DriverID = req.body.DriverID;
   const CarID = req.body.CarID;
@@ -123,7 +167,7 @@ router.put('/:id', async (req, res) => {
 
   const updatedTrip = await prisma.trip.update({
     where: {
-      TripID: parseInt(TripID)
+      TripID: TripID
     },
     data: {
       DriverID: parseInt(DriverID),
