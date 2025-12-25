@@ -9,170 +9,131 @@ const prisma = new PrismaClient();
 
 // ------------------------------
 // [Get] users/:id
-// return single user by id
 // ------------------------------
 router.get('/:id', async (req, res) => {
     const { id } = req.params;
     const user = await prisma.user.findUnique({
       where: { UserID: parseInt(id) }
     });
-    if (!user) {
-      return res.status(404).json({ message: "Gebruiker niet gevonden" });
-    }
+    if (!user) return res.status(404).json({ message: "Gebruiker niet gevonden" });
     res.json(user);
 });
 
 // ------------------------------
-// [Get] users
-// return array of users
+// [Get] users (All)
 // ------------------------------
 router.get('/', async (req, res) => {
   const users = await prisma.user.findMany({
-    select: { // never return password
-      UserID: true,
-      FirstName: true,
-      LastName: true,
-      Email: true,
-      DateOfBirth: true,
-      PhoneNumber: true,
-      Address: true,
-      CreatedAt: true,
+    select: { 
+      UserID: true, FirstName: true, LastName: true, Email: true,
+      DateOfBirth: true, PhoneNumber: true, Address: true, CreatedAt: true,
+      car: true 
     }
   });
   res.json(users);
 });
 
-
 // ------------------------------
-// [Post] users 
-// Register a new user
+// [Post] users (Register)
 // ------------------------------
 router.post('/', async (req, res) => {
-  
-  const FirstName = req.body.FirstName;
-  const LastName = req.body.LastName;
-  const DateOfBirth = req.body.DateOfBirth;
-  const PasswordHash = req.body.PasswordHash;
-  const PhoneNumber = req.body.PhoneNumber;
-  const Address = req.body.Address;
-  const Email = req.body.Email;
+  const { FirstName, LastName, DateOfBirth, PasswordHash, PhoneNumber, Address, Email, Car } = req.body;
 
-  // Check if user with this email already exists
-  const checkUserExists = await prisma.user.findMany({
-    where: {
-      Email: Email
-    }
-  });
-  
+  const checkUserExists = await prisma.user.findUnique({ where: { Email: Email } });
+  if (checkUserExists) return res.status(400).json({ "status": "User with this email already exists" });
 
-  if (checkUserExists.length > 0) {
-    res.json({
-      "status": "user with this email already exists"
-    });
-  } else {
+  try {
     const newUser = await prisma.user.create({
       data: {
-        FirstName,
-        LastName,
-        DateOfBirth: new Date(DateOfBirth),
-        PhoneNumber,
-        Email,
-        Address,
-        PasswordHash
+        FirstName, LastName, DateOfBirth: new Date(DateOfBirth),
+        PhoneNumber, Email, Address, PasswordHash,
+        car: Car ? {
+          create: {
+            Brand: Car.Brand, Model: Car.Model, LicensePlate: Car.LicensePlate,
+            Seats: parseInt(Car.Seats), Color: Car.Color, isVerified: false
+          }
+        } : undefined 
       },
-      select:{ // Never Returns the Password
-        UserID: true,
-        FirstName: true,
-        Email:true,
-        CreatedAt:true,
-      }
+      include: { car: true }
     });
     res.json(newUser);
+  } catch (error) {
+    res.status(500).json({ status: "Er ging iets mis bij het opslaan.", error: error.message });
   }
 });
 
-
 // ------------------------------
-// [Put] users 
+// [Put] users (Update)
 // ------------------------------
 router.put('/:id', async (req, res) => {
-  const userId = req.params.id;
+  const userId = parseInt(req.params.id);
+  const { PhoneNumber, Email, Password } = req.body;
+  
+  // Let op: We updaten hier NIET FirstName, LastName of Address omdat jij dat niet wilt.
+  let dataToUpdate = { PhoneNumber, Email };
 
-  const FirstName = req.body.FirstName;
-  const LastName = req.body.LastName;
-  const DateOfBirth = req.body.DateOfBirth;
-  const PasswordHash = req.body.PasswordHash;
-  const PhoneNumber = req.body.PhoneNumber;
-  const Address = req.body.Address;
-  const Email = req.body.Email;
+  if (Password) dataToUpdate.PasswordHash = Password;
   
-  const updatedUser = await prisma.user.update({
-    where: {
-      UserID: parseInt(userId)
-    },
-    data: {
-      FirstName,
-      LastName,
-      DateOfBirth: new Date(DateOfBirth),
-      PhoneNumber,
-      Email,
-      Address
-    },
-  });
-  
-  res.json(updatedUser);
+  try {
+      const updatedUser = await prisma.user.update({
+        where: { UserID: userId },
+        data: dataToUpdate,
+      });
+      res.json(updatedUser);
+  } catch (error) {
+      res.status(500).json({ status: "Error updating user", error: error.message });
+  }
 });
 
 // ------------------------------
-// [Delete] users
+// [Delete] users (Account verwijderen)
 // ------------------------------
 router.delete('/:id', async (req, res) => {
-  const userId = req.params.id;
-  
-  const deletedUser = await prisma.user.delete({
-    where: {
-      UserID: parseInt(userId)
-    }
-  });
-  
-  res.send(deletedUser);
+  const userId = parseInt(req.params.id);
+
+  try {
+    // 1. Verwijder eerst gekoppelde data om database fouten te voorkomen
+    
+    // Verwijder boekingen van deze persoon
+    await prisma.passengerbooking.deleteMany({ where: { PassengerID: userId } });
+    
+    // Verwijder auto's van deze persoon
+    await prisma.car.deleteMany({ where: { OwnerID: userId } });
+
+    // 2. Verwijder nu de gebruiker zelf
+    const deletedUser = await prisma.user.delete({
+      where: { UserID: userId }
+    });
+    
+    res.json({ message: "Account succesvol verwijderd", user: deletedUser });
+
+  } catch (error) {
+    console.error("Delete error:", error);
+    // Als het nog steeds mislukt (bijv. omdat ze nog driver zijn van een actieve rit)
+    res.status(500).json({ 
+        message: "Kon account niet verwijderen. Zorg dat je geen openstaande ritten hebt als chauffeur.",
+        error: error.message 
+    });
+  }
 });
 
-
-// -----------------------------------
-// LOGIN ROUTE 
-// URL: POST /users/login
-// -----------------------------------
+// ------------------------------
+// [Post] Login
+// ------------------------------
 router.post('/login', async (req, res) => {
   const { Email, Password } = req.body;
-
+  const user = await prisma.user.findUnique({ where: { Email: Email } });
   
-  // search user
-  const user = await prisma.user.findUnique({
-    where: { Email: Email }
-  });
+  if (!Email || !Password) return res.status(400).json({ status: "Vul e-mail en wachtwoord in" });
+  if (!user || user.PasswordHash !== Password) return res.status(401).json({ status: "E-mail of wachtwoord onjuist" });
   
-  // Check data 
-  if (!Email || !Password) {
-    return res.status(400).json({ status: "Vul e-mail en wachtwoord in" });
-  }
-  if (!user || user.PasswordHash !== Password) {
-    return res.status(401).json({ status: "E-mail of wachtwoord onjuist" });
-  }
-  
-  // login
   res.json({
     status: "success",
     user: {
-      UserID: user.UserID,
-      FirstName: user.FirstName,
-      LastName: user.LastName,
-      Email: user.Email,
-      Address: user.Address
+      UserID: user.UserID, FirstName: user.FirstName, LastName: user.LastName,
+      Email: user.Email, Address: user.Address
     }
   });
-  
 });
-
 
 module.exports = router;
