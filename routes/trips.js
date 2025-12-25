@@ -1,4 +1,3 @@
-// PUT NEEDS TO BE FIXED 
 // ------------------------------
 // Import Packages
 // ------------------------------
@@ -15,42 +14,38 @@ const prisma = new PrismaClient();
 router.get('/search', async (req, res) => {
     const { start, end } = req.query;
 
-    try {
-        const trips = await prisma.trip.findMany({
-            where: {
-                TripStatus: 'Scheduled',
-                // contains = delen vd naam
-                ...(start && {
-                    StartLocation: {
-                        contains: start
-                    }
-                }),
-                // Filter op eindlocatie 
-                ...(end && {
-                    EndLocation: {
-                        contains: end
-                    }
-                })
-            },
-            include: {
-                user: { 
-                    select: { FirstName: true, LastName: true }
-                },
-                car: {
-                    select: { Brand: true, Model: true, Color: true }
+    
+    const trips = await prisma.trip.findMany({
+        where: {
+            TripStatus: 'Scheduled',
+            // contains = delen vd naam
+            ...(start && {
+                StartLocation: {
+                    contains: start
                 }
+            }),
+            // Filter op eindlocatie 
+            ...(end && {
+                EndLocation: {
+                    contains: end
+                }
+            })
+        },
+        include: {
+            user: { 
+                select: { FirstName: true, LastName: true }
             },
-            orderBy: {
-                DepartureTime: 'asc' 
+            car: {
+                select: { Brand: true, Model: true, Color: true }
             }
-        });
+        },
+        orderBy: {
+            DepartureTime: 'asc' 
+        }
+    })
+    res.json(trips);
 
-        res.json(trips);
-
-    } catch (error) {
-        console.error("Fout bij zoeken trips:", error);
-        res.status(500).json({ status: "Server error" });
-    }
+    
 });
 
 // ------------------------------
@@ -149,8 +144,7 @@ router.post('/', async (req, res) => {
 // ------------------------------
 // [Put] Trips
 // Update trip
-// DOESNT WORK !!!!!!!!!! 
-// I think Because of Foreign Keys
+
 // ------------------------------
 router.put('/:id', async (req, res) => {
   const TripID = parseInt(req.params.id);
@@ -165,24 +159,25 @@ router.put('/:id', async (req, res) => {
   const SeatsBooked = req.body.SeatsBooked || 0; // default is 0 
   const TripStatus = req.body.TripStatus;  
 
-  const updatedTrip = await prisma.trip.update({
-    where: {
-      TripID: TripID
-    },
-    data: {
-      DriverID: parseInt(DriverID),
-      CarID: parseInt(CarID),
-      StartLocation,
-      EndLocation,
-      DepartureTime: new Date(DepartureTime),
-      Price: parseFloat(Price),
-      SeatsOffered: parseInt(SeatsOffered),
-      SeatsBooked: parseInt(SeatsBooked),
-      TripStatus,
-    },
-  });
-  
-  res.json(updatedTrip);
+  const dataToUpdate = {};
+
+    if (DriverID) dataToUpdate.DriverID = parseInt(DriverID);
+    if (CarID) dataToUpdate.CarID = parseInt(CarID);
+    if (StartLocation) dataToUpdate.StartLocation = StartLocation;
+    if (EndLocation) dataToUpdate.EndLocation = EndLocation;
+    if (DepartureTime) dataToUpdate.DepartureTime = new Date(DepartureTime);
+    if (Price) dataToUpdate.Price = parseFloat(Price);
+    if (SeatsOffered) dataToUpdate.SeatsOffered = parseInt(SeatsOffered);
+    
+    if (SeatsBooked !== undefined) dataToUpdate.SeatsBooked = parseInt(SeatsBooked);
+    
+    if (TripStatus) dataToUpdate.TripStatus = TripStatus;
+    const updatedTrip = await prisma.trip.update({
+      where: { TripID: TripID },
+      data: dataToUpdate,
+    });
+    
+    res.json(updatedTrip);
 });
 
 // ------------------------------

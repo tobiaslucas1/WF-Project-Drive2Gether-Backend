@@ -3,6 +3,25 @@ const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 // ------------------------------
+// [GET] /bookings
+// get bookings met filteropties
+// ------------------------------
+router.get('/', async (req, res) => {
+    const { TripID, PassengerID } = req.query;
+
+    // We bouwen een filter
+    let whereClause = {};
+    if (TripID) whereClause.TripID = parseInt(TripID);
+    if (PassengerID) whereClause.PassengerID = parseInt(PassengerID);
+
+    
+    const bookings = await prisma.passengerbooking.findMany({
+        where: whereClause
+    });
+    res.json(bookings); 
+    
+});
+// ------------------------------
 // [POST] /bookings
 // Maak een nieuwe reservering
 // ------------------------------

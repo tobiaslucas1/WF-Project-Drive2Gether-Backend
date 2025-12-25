@@ -8,6 +8,21 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 // ------------------------------
+// [Get] users/:id
+// return single user by id
+// ------------------------------
+router.get('/:id', async (req, res) => {
+    const { id } = req.params;
+    const user = await prisma.user.findUnique({
+      where: { UserID: parseInt(id) }
+    });
+    if (!user) {
+      return res.status(404).json({ message: "Gebruiker niet gevonden" });
+    }
+    res.json(user);
+});
+
+// ------------------------------
 // [Get] users
 // return array of users
 // ------------------------------

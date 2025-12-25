@@ -39,7 +39,6 @@ router.post('/', async (req, res) => {
   const Color = req.body.Color;
   const Seats = req.body.Seats;
   const OwnerID = req.body.OwnerID;
-  const IsVerified = req.body.IsVerified;
 
   // Check if car with this license plate already exists
   const checkCarExists = await prisma.car.findMany({
@@ -58,10 +57,9 @@ router.post('/', async (req, res) => {
         Model,
         Brand,
         LicensePlate,
-        Seats: parseInt(Seats), // seats saved as an INT
+        Seats: parseInt(Seats), 
         Color,
         OwnerID: parseInt(OwnerID),
-        IsVerified
       }
     });
     res.json(newCar);
@@ -80,7 +78,6 @@ router.put('/:id', async (req, res) => {
   const LicensePlate = req.body.LicensePlate;
   const Color = req.body.Color;
   const Seats = req.body.Seats;
-  const IsVerified = req.body.IsVerified;
   
   const updatedCar = await prisma.car.update({
     where: {
@@ -92,8 +89,7 @@ router.put('/:id', async (req, res) => {
       LicensePlate,
       Color,
       Seats,
-      IsVerified
-    }
+      }
   });
   
   res.json(updatedCar);
