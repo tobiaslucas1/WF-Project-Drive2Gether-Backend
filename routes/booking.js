@@ -1,15 +1,19 @@
+// ------------------------------
+// Import Packages
+// ------------------------------
 const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 // ------------------------------
 // [GET] /bookings
-// get bookings met filteropties
+// get bookings with optional filters
 // ------------------------------
 router.get('/', async (req, res) => {
-    const { TripID, PassengerID } = req.query;
 
-    // We bouwen een filter
+    const TripID = req.query.TripID; //query: if present, filter by TripID 
+    const PassengerID = req.query.PassengerID; //query: if present, filter by PassengerID 
+
     let whereClause = {};
     if (TripID) whereClause.TripID = parseInt(TripID);
     if (PassengerID) whereClause.PassengerID = parseInt(PassengerID);
@@ -23,13 +27,14 @@ router.get('/', async (req, res) => {
 });
 // ------------------------------
 // [POST] /bookings
-// Maak een nieuwe reservering
+// create a new booking
 // ------------------------------
 router.post('/', async (req, res) => {
-    const { TripID, PassengerID } = req.body;
+    const TripID = req.body.TripID;
+    const PassengerID = req.body.PassengerID
 
     if (!TripID || !PassengerID) {
-        return res.status(400).json({ status: "Error", message: "TripID en PassengerID zijn verplicht." });
+        return res.status(400).json({message: "TripID en PassengerID zijn verplicht." });
     }
 
     const trip = await prisma.trip.findUnique({
@@ -53,6 +58,7 @@ router.post('/', async (req, res) => {
         return res.status(400).json({ message: "Je hebt deze rit al geboekt!" });
     }
 
+    // .$transaction only works if both prisma functions completed
     await prisma.$transaction([
         prisma.passengerbooking.create({
             data: {
@@ -76,4 +82,4 @@ router.post('/', async (req, res) => {
     
 });
 
-module.exports = router;
+module.exports = router; 
