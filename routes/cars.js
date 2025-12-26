@@ -40,7 +40,6 @@ router.post('/', async (req, res) => {
   const Seats = req.body.Seats;
   const OwnerID = req.body.OwnerID;
 
-  // Check if car with this license plate already exists
   const checkCarExists = await prisma.car.findMany({
     where: {
       LicensePlate: LicensePlate
@@ -48,8 +47,8 @@ router.post('/', async (req, res) => {
   });
   
   if (checkCarExists.length > 0) {
-    res.json({
-      "status": "car with this license plate already exists"
+    return res.status(400).json({
+      message: "Een auto met dit kenteken bestaat al."
     });
   } else {
     const newCar = await prisma.car.create({
@@ -68,11 +67,10 @@ router.post('/', async (req, res) => {
 
 // ------------------------------
 // [Put] Cars
-// return updated car object
+// return updated car 
 // ------------------------------
 router.put('/:id', async (req, res) => {
   const CarID = req.params.id;
-
   const Model = req.body.Model;
   const Brand = req.body.Brand;
   const LicensePlate = req.body.LicensePlate;

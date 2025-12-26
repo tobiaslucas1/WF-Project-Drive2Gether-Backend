@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 
 // ------------------------------
 // [GET] /reviews
-// Haal alle reviews op
+// return array of reviews
 // ------------------------------
 router.get('/', async (req, res) => {
   const reviews = await prisma.review.findMany();
@@ -27,7 +27,10 @@ router.get('/user/:userId', async (req, res) => {
       where: { ReviewedID: userId },
       include: {
           user_review_ReviewerIDTouser: {
-              select: { FirstName: true, LastName: true }
+              select: { 
+                FirstName: true,
+                LastName: true 
+            }
           }
       },
       orderBy: {
@@ -40,13 +43,18 @@ router.get('/user/:userId', async (req, res) => {
 
 // ------------------------------
 // [POST] /reviews
-// Maak een nieuwe review aan
+// Create a new review
 // ------------------------------
 router.post('/', async (req, res) => {
-  const { ReviewerID, ReviewedID, Rating, Comment, TripID, ReviewType } = req.body;
+    const ReviewerID = req.body.ReviewerID;
+    const ReviewedID = req.body.ReviewedID;
+    const Rating = req.body.Rating;
+    const Comment = req.body.Comment;
+    const TripID = req.body.TripID;
+    const ReviewType = req.body.ReviewType;
+
   if (!ReviewerID || !ReviewedID || !Rating || !TripID) {
       return res.status(400).json({
-          status: "Error",
           message: "Vul alle verplichte velden in (ReviewerID, ReviewedID, Rating, TripID).",
       });
   }
@@ -55,7 +63,6 @@ router.post('/', async (req, res) => {
   });
   if (!trip) {
       return res.status(404).json({
-          status: "Error",
           message: `Trip met ID ${TripID} niet gevonden.`,
       });
   }

@@ -6,13 +6,15 @@ const router = express.Router();
 
 const { PrismaClient } = require('@prisma/client'); 
 const prisma = new PrismaClient();
+
 // ------------------------------
-// [GET] /messages/:TripID
-//  return array of messages for a specific trip
+// [GET] /messages/trip/:TripID
+//  get messages for a specific trip
 // ------------------------------
 router.get('/trip/:TripID', async (req, res) => {
   const TripID = parseInt(req.params.TripID);
-    const messages = await prisma.message.findMany({
+  
+  const messages = await prisma.message.findMany({
     where: { TripID: TripID },
     select: {
         MessageID: true,
@@ -21,11 +23,20 @@ router.get('/trip/:TripID', async (req, res) => {
         Content: true,
         IsRead: true,
         TripID: true,
+        user_message_SenderIDTouser: {
+            select: {
+                FirstName: true,
+                LastName: true
+            }
+        }
+    },
+    orderBy: {
+        MessageID: 'asc' 
     }
   });
-    res.json(messages);
+  
+  res.json(messages);
 });
-
 
 // --------------------------------------------------------
 // [GET] messages
@@ -56,7 +67,6 @@ router.post('/', async (req, res) => {
   const ReceiverID =  req.body.ReceiverID;
   const TripID = req.body.TripID;
   const Content = req.body.Content;
-  // Convert to integers
   const senderInt = parseInt(SenderID);
   const receiverInt = parseInt(ReceiverID);
   const tripInt = parseInt(TripID);
@@ -64,13 +74,12 @@ router.post('/', async (req, res) => {
   const trip = await prisma.trip.findUnique({
             where: { TripID: TripID }
         });
-
-    if (!trip) {
-        return res.json({
-            status: "Error",
-            message: `Trip with ID ${TripID} not found.`,
-        });
-    }
+        
+  if (!trip) {
+      return res.status(400).json({
+          message: `Trip with ID ${TripID} not found.`,
+      });
+  }
 
   const newMessage = await prisma.message.create({
       data: {
@@ -86,8 +95,7 @@ router.post('/', async (req, res) => {
     
     
     if(!SenderID || !ReceiverID || !TripID || !Content){
-      return  res.json({
-        status: "Error",
+      return res.status(400).json({
         message: "Mandatory field missing"
       });
     }
