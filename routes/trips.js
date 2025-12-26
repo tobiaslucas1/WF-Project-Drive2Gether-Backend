@@ -9,48 +9,75 @@ const prisma = new PrismaClient();
 
 // ------------------------------
 // [GET] /trips/search
-// Zoek trips op basis van start en eind locatie
+// search trips with filters
 // ------------------------------
 router.get('/search', async (req, res) => {
-    const { start, end } = req.query;
 
-    
-    const trips = await prisma.trip.findMany({
-        where: {
-            TripStatus: 'Scheduled',
-            // contains = delen vd naam
-            ...(start && {
-                StartLocation: {
-                    contains: start
-                }
-            }),
-            // Filter op eindlocatie 
-            ...(end && {
-                EndLocation: {
-                    contains: end
-                }
-            })
+    const start = req.query.start; 
+    const end = req.query.end;  
+    const date = req.query.date;
+    const time = req.query.time;
+
+    let whereClause = {
+      TripStatus: 'Scheduled'
+    };
+
+    if (start) {
+      whereClause.StartLocation = { contains: start };
+    }
+    if (end) {
+      whereClause.EndLocation = { contains: end };
+    }
+
+    if (date) {
+      if (time) {
+        // Search by date and Time +/- 30 min
+        const targetDateTime = new Date(`${date}T${time}`);
+        const minTime = new Date(targetDateTime.getTime() - 30 * 60000); 
+        const maxTime = new Date(targetDateTime.getTime() + 30 * 60000); 
+        whereClause.DepartureTime = {
+          gte: minTime, // greater than or equal 
+          lte: maxTime // less than or equal
+        };
+      } else {
+        // Search by day
+        const searchDate = new Date(date);
+        const nextDay = new Date(searchDate);
+        nextDay.setDate(searchDate.getDate() + 1);
+        
+        whereClause.DepartureTime = {
+          gte: searchDate,
+          lt: nextDay
+        };
+      }
+    }
+
+    let trips = await prisma.trip.findMany({
+      where: whereClause,
+      include: {
+        user: { 
+          select: { 
+            FirstName: true, 
+            LastName: true, 
+            ProfilePicture: true 
+          } 
         },
-        include: {
-            user: { 
-                select: { FirstName: true, LastName: true }
-            },
-            car: {
-                select: { Brand: true, Model: true, Color: true }
-            }
+        car: { 
+          select: { 
+            Brand: true,
+            Model: true,
+            Color: true 
+          }
         },
-        orderBy: {
-            DepartureTime: 'asc' 
-        }
-    })
+      },
+      orderBy: { DepartureTime: 'asc' }
+    });
+
     res.json(trips);
-
-    
 });
 
 // ------------------------------
 // [Get] trips
-// return array of trips
 // ------------------------------
 router.get('/', async (req, res) => {
   const trips = await prisma.trip.findMany({
@@ -72,8 +99,8 @@ router.get('/', async (req, res) => {
 
 
 // ------------------------------
-// [Get]  /trips/:id
-// return details of a specific trip
+// [Get] /trips/:id
+// Details of a specific trip
 // ------------------------------
 router.get('/:id', async (req, res) => {
   const TripID = parseInt(req.params.id);
@@ -81,23 +108,22 @@ router.get('/:id', async (req, res) => {
   const trip = await prisma.trip.findUnique({
     where: {TripID},
     include: {
-        user: { 
-            select: { 
-                FirstName: true, 
-                LastName: true,
-                PhoneNumber: true, 
-                Email: true     
-            } 
-        },
-        car: true
+      user: { 
+        select: { 
+          FirstName: true, 
+          LastName: true,
+          PhoneNumber: true, 
+          Email: true,
+          ProfilePicture: true 
+        } 
+      },
+      car: true
     }
-    
   });
 
   if (!trip) 
     {
-      return res.json({ 
-        status: "Error",
+      return res.status(404).json({ 
          message: `Trip with ID ${TripID} not found.`
          });
     } 
@@ -105,11 +131,8 @@ router.get('/:id', async (req, res) => {
   res.json(trip);
 });
 
-
 // ------------------------------
 // [Post] Trips
-// return created trip 
-// Payment method still needs to be added 
 // ------------------------------
 router.post('/', async (req, res) => {
   const DriverID = req.body.DriverID;
@@ -119,9 +142,7 @@ router.post('/', async (req, res) => {
   const DepartureTime = req.body.DepartureTime;
   const Price = req.body.Price;
   const SeatsOffered = req.body.SeatsOffered;
-  const SeatsBooked = req.body.SeatsBooked || 0; // default is 0 
-  const TripStatus = req.body.TripStatus;
-
+  const SeatsBooked = req.body.SeatsBooked;
 
   const newTrip = await prisma.trip.create({
     data: {
@@ -132,23 +153,18 @@ router.post('/', async (req, res) => {
       DepartureTime: new Date(DepartureTime),
       Price: parseFloat(Price),
       SeatsOffered: parseInt(SeatsOffered),
-      SeatsBooked: parseInt(SeatsBooked),
+      SeatsBooked: parseInt(SeatsBooked || 0),
       TripStatus: "Scheduled",
     }
   });
-  
   res.json(newTrip);
 });
 
-
 // ------------------------------
 // [Put] Trips
-// Update trip
-
 // ------------------------------
 router.put('/:id', async (req, res) => {
   const TripID = parseInt(req.params.id);
-
   const DriverID = req.body.DriverID;
   const CarID = req.body.CarID;
   const StartLocation = req.body.StartLocation;
@@ -156,47 +172,41 @@ router.put('/:id', async (req, res) => {
   const DepartureTime = req.body.DepartureTime;
   const Price = req.body.Price;
   const SeatsOffered = req.body.SeatsOffered;
-  const SeatsBooked = req.body.SeatsBooked || 0; // default is 0 
-  const TripStatus = req.body.TripStatus;  
+  const SeatsBooked = req.body.SeatsBooked;
+  const TripStatus = req.body.TripStatus;
+
 
   const dataToUpdate = {};
-
-    if (DriverID) dataToUpdate.DriverID = parseInt(DriverID);
-    if (CarID) dataToUpdate.CarID = parseInt(CarID);
-    if (StartLocation) dataToUpdate.StartLocation = StartLocation;
-    if (EndLocation) dataToUpdate.EndLocation = EndLocation;
-    if (DepartureTime) dataToUpdate.DepartureTime = new Date(DepartureTime);
-    if (Price) dataToUpdate.Price = parseFloat(Price);
-    if (SeatsOffered) dataToUpdate.SeatsOffered = parseInt(SeatsOffered);
+  //Not to lose data
+  if (DriverID) dataToUpdate.DriverID = parseInt(DriverID);
+  if (CarID) dataToUpdate.CarID = parseInt(CarID);
+  if (StartLocation) dataToUpdate.StartLocation = StartLocation;
+  if (EndLocation) dataToUpdate.EndLocation = EndLocation;
+  if (DepartureTime) dataToUpdate.DepartureTime = new Date(DepartureTime);
+  if (Price) dataToUpdate.Price = parseFloat(Price);
+  if (SeatsOffered) dataToUpdate.SeatsOffered = parseInt(SeatsOffered);
+  if (SeatsBooked !== undefined) dataToUpdate.SeatsBooked = parseInt(SeatsBooked);
+  if (TripStatus) dataToUpdate.TripStatus = TripStatus;
     
-    if (SeatsBooked !== undefined) dataToUpdate.SeatsBooked = parseInt(SeatsBooked);
-    
-    if (TripStatus) dataToUpdate.TripStatus = TripStatus;
-    const updatedTrip = await prisma.trip.update({
+  const updatedTrip = await prisma.trip.update({
       where: { TripID: TripID },
       data: dataToUpdate,
     });
-    
-    res.json(updatedTrip);
+  res.json(updatedTrip);
+  
 });
 
 // ------------------------------
 // [Delete] trips
-// Deletes/Cancelles a trip
-//-------------------------------
+// ------------------------------
 router.delete('/:id', async (req, res) => {
   const TripID = req.params.id;
-  
-  const deletedTrip = await prisma.trip.delete({
-    where: {
-      TripID: parseInt(TripID)
-    }
-  });
-  
-  res.send(deletedTrip);
+    const deletedTrip = await prisma.trip.delete({
+        where: {
+          TripID: parseInt(TripID)
+        }
+      });
+      res.send(deletedTrip);
 });
-
-
-
 
 module.exports = router;

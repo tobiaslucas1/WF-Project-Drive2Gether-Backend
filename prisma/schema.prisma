@@ -12,6 +12,7 @@ model car {
   OwnerID      Int?
   Brand        String?  @db.VarChar(100)
   Model        String?  @db.VarChar(100)
+  Color        String?  @db.VarChar(255)
   LicensePlate String?  @unique(map: "LicensePlate") @db.VarChar(50)
   Seats        Int?
   isVerified   Boolean? @default(false)
@@ -19,6 +20,7 @@ model car {
   trip         trip[]
 
   @@index([OwnerID], map: "OwnerID")
+
 }
 
 model message {
@@ -40,10 +42,10 @@ model message {
 model passengerbooking {
   TripID         Int
   PassengerID    Int
-  SeatsRequested Int?                            @default(1)
+  SeatsRequested Int?                           @default(1)
   BookingStatus  passengerbooking_BookingStatus?
-  trip           trip                            @relation(fields: [TripID], references: [TripID], onDelete: NoAction, onUpdate: NoAction, map: "passengerbooking_ibfk_1")
-  user           user                            @relation(fields: [PassengerID], references: [UserID], onDelete: NoAction, onUpdate: NoAction, map: "passengerbooking_ibfk_2")
+  trip           trip                           @relation(fields: [TripID], references: [TripID], onDelete: NoAction, onUpdate: NoAction, map: "passengerbooking_ibfk_1")
+  user           user                           @relation(fields: [PassengerID], references: [UserID], onDelete: NoAction, onUpdate: NoAction, map: "passengerbooking_ibfk_2")
 
   @@id([TripID, PassengerID])
   @@index([PassengerID], map: "PassengerID")
@@ -94,6 +96,7 @@ model user {
   DateOfBirth                      DateTime?          @db.Date
   Email                            String?            @unique(map: "Email") @db.VarChar(255)
   Address                          String?            @db.VarChar(255)
+  ProfilePicture                   String?            @db.VarChar(500)
   PasswordHash                     String?            @db.VarChar(255)
   PhoneNumber                      String?            @db.VarChar(255)
   CreatedAt                        DateTime?          @default(now()) @db.DateTime(0)
